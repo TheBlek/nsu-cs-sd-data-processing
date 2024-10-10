@@ -9,9 +9,13 @@ import java.nio.channels.CompletionHandler;
 
 public class Main {
     public static void main(String[] args) {
-        var listenPort = 8080;
-        var remoteIp = "127.0.0.1";
-        var remotePort = 8081;
+        if (args.length < 3) {
+            System.out.println("Not enough parameters");
+            return;
+        }
+        var listenPort = Integer.parseInt(args[0]);
+        var remoteIp = args[1];
+        var remotePort = Integer.parseInt(args[2]);
         var remoteAddress = new InetSocketAddress(remoteIp, remotePort);
         AsynchronousServerSocketChannel serverSocket;
         try {
@@ -19,11 +23,6 @@ public class Main {
         } catch (Exception e) {
             System.out.println("Exception while creating serverSocket" + e);
             return;
-        }
-        if (!serverSocket.isOpen()) {
-            System.out.println("Its closed mate");
-        } else {
-            System.out.println("Its open mate");
         }
         serverSocket.accept(null, new ClientConnectionHandler(remoteAddress, serverSocket));
         while (true) {}
