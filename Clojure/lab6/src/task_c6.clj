@@ -12,6 +12,8 @@
   {:forward {},
    :backward {}})
 
+(def transaction-count (atom 0))
+
 (defn route
   "Add a new route (route) to the given route map
    route-map - route map to modify
@@ -38,32 +40,58 @@
   [route-map from to]
   (if (= from to)
     {:path '(), :price 0}
-    (iterate (fn [currentState]
-               (let [
-                     node (min-key :distance (currentState :not-visited))
-                     relaxedState (reduce-kv
-                                     (fn [state to route-desc]
-                                       (let [relaxed-dist (+ (route-desc :price) (node :distance))]
-                                         (if (< relaxed-dist (((state :not-visited) to) :distance))
-                                           (assoc state :not-visited (assoc (state :not-visited) to {:distance relaxed-dist, :prev (node :node)}))
-                                           state)
-                                         )
-                                       )
-                                     currentState
-                                     (or (get-in route-map [:forward (node :node)]) {})
-                                     )
-                     ]
-                  {:visited (assoc relaxedState (node :node) node), :not-visited (dissoc relaxedState (node :node))}
-                  )
-               )
-             ;; TODO: Write initial state
-             )
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;;TODO implement me using Dijkstra algorithm
-    ;;implementation must be pure functional besides the transaction itself, tickets reference modification and 
-    ;;restarts monitoring (atom could be used for this)
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    nil))
+    (try
+      (dosync
+        (swap! transaction-count (partial + 1))
+        (let [
+              other-nodes (filter #(not= from %) (keys (route-map :backward)))
+              finalDijkstraState (nth (iterate (fn [currentState]
+                                                 (let [
+                                                       nextId (apply min-key (fn [key] (get-in currentState [:not-visited key :distance])) (keys (currentState :not-visited))),
+                                                       next (get-in currentState [:not-visited nextId]),
+                                                       relaxedState (reduce-kv
+                                                                      (fn [state to route-desc]
+                                                                        (let [relaxed-dist (+ (route-desc :price) (next :distance)), node (get-in state [:not-visited to])]
+                                                                          (if (and (not= node nil) (< relaxed-dist (node :distance)))
+                                                                            (assoc state :not-visited (assoc (state :not-visited) to {:node to, :distance relaxed-dist, :prev nextId}))
+                                                                            state
+                                                                            )
+                                                                          )
+                                                                        )
+                                                                      currentState
+                                                                      (or (select-keys (get-in route-map [:forward nextId]) (filter #(> @(get-in route-map [:forward nextId % :tickets]) 0) (keys ((route-map :forward) nextId)))) {})
+                                                                      ),
+                                                       ]
+                                                   {:visited (assoc (relaxedState :visited) nextId next), :not-visited (dissoc (relaxedState :not-visited) nextId)}
+                                                   )
+                                                 )
+                                               {:visited {}, :not-visited (assoc (zipmap other-nodes (map (fn [id] {:node id, :distance 1000000, :prev id}) other-nodes)) from {:node from, :distance 0, :prev from})}
+                                               )
+                                      (count (keys (route-map :backward)))
+                                      ),
+              path (->>
+                     (iterate #(get-in finalDijkstraState [:visited % :prev]) to)
+                     (take (+ (count other-nodes) 1))
+                     (take-while #(not= % from))
+                     reverse
+                     (cons from)),
+              path-len (count path),
+              nexts (concat (drop 1 path) (list (first path))),
+              foreach-flight #(map % (take (- path-len 1) path) (take (- path-len 1) nexts))
+              ]
+          (->
+            (fn [prev next] (commute (get-in route-map [:forward prev next :tickets]) #(- % 1)))
+            foreach-flight
+            doall
+            )
+            {:path path, :price (reduce + (foreach-flight (fn [p n] (get-in route-map [:forward p n :price]))))}
+          )
+        )
+      (catch Exception e { :error "Failed to book" })
+      )
+    )
+  )
+
   
 ;;;cities
 (def spec1 (-> empty-map
@@ -93,7 +121,9 @@
       (let [booking (book-tickets route-map from to)]
         (if (booking :error)
           bookings
-          (recur (conj bookings booking)))))))
+          ;(conj bookings booking)
+          (recur (conj bookings booking))
+          )))))
 
 (defn print-bookings [name ft]
   (println (str name ":") (count ft) "bookings")
@@ -102,12 +132,15 @@
 
 (defn run []
   ;;try to tune timeouts in order to all the customers gain at least one booking 
-  (let [f1 (booking-future spec1 "City1" "City3" 0 1),
-        f2 (booking-future spec1 "City1" "City2" 100 1),
-        f3 (booking-future spec1 "City2" "City3" 100 1)]
+  (let [
+        f1 (booking-future spec1 "City1" "City3" 100 100),
+        f2 (booking-future spec1 "City1" "City2" 100 100),
+        f3 (booking-future spec1 "City2" "City3" 100 100)
+        ]
     (print-bookings "City1->City3:" @f1)
     (print-bookings "City1->City2:" @f2)
     (print-bookings "City2->City3:" @f3)
     ;;replace with you mechanism to monitor a number of transaction restarts
-    ;;(println "Total (re-)starts:" @booking.impl/transact-cnt)
+    (println "Total (re-)starts:" @transaction-count)
     ))
+(run)

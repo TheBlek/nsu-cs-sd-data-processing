@@ -20,4 +20,3 @@
 
 (time (doall (take 20 (filter heavy_even test_list))))
 (time (doall (take 20 (par-filter heavy_even test_list))))
-(time (doall (take 20 (p-filter heavy_even test_list))))
