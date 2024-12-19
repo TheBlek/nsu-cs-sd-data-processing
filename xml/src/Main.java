@@ -1,5 +1,3 @@
-import com.sun.jdi.VoidType;
-import io.vavr.Function3;
 import org.xml.sax.XMLReader;
 
 import javax.xml.namespace.QName;
@@ -12,7 +10,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Main {
@@ -23,25 +21,25 @@ public class Main {
     private static class PersonTemplate {
         String firstName = null; // done
         String familyName = null; // done
-        String motherName = null;
-        String fatherName = null;
-        String wifeName = null;
+        String motherName = null; // done
+        String fatherName = null; // done
+        String wifeName = null; // done
         Integer wifeId = null; // done
-        String husbandName = null;
+        String husbandName = null; // done
         Integer husbandId = null; // done
-        String spouceName = null;
-        List<String> brotherNames = new ArrayList<>();
-        List<String> sisterNames = new ArrayList<>();
-        List<Integer> siblingIds = new ArrayList<>();
+        String spouceName = null; // done
+        List<String> brotherNames = new ArrayList<>(); // done
+        List<String> sisterNames = new ArrayList<>(); // done
+        List<Integer> siblingIds = new ArrayList<>(); // done
         List<Integer> sonIds = new ArrayList<>(); // done
         List<Integer> daughterIds = new ArrayList<>(); // done
-        List<String> childrenNames = new ArrayList<>();
-        List<String> parentNames = new ArrayList<>();
+        List<String> childrenNames = new ArrayList<>(); // done
+        List<String> parentNames = new ArrayList<>(); // done
         List<Integer> parentIds = new ArrayList<>(); // done
         Integer siblingsNum = null;
         Integer childrenNum = null;
-        Integer id = null;
-        Gender gender = null;
+        Integer id = null; // done
+        Gender gender = null; // done
 
         @Override
         public String toString() {
@@ -156,7 +154,7 @@ public class Main {
                             person.wifeId = Integer.parseInt(nameOrId.substring(1));;
                         } catch (Exception e) {
                             if (!nameOrId.equals("UNKNOWN")) {
-                                person.wifeName = nameOrId;
+                                person.wifeName = nameOrId.trim().replaceAll(" +", " ");
                             }
                         }
                         break;
@@ -166,23 +164,23 @@ public class Main {
                             person.husbandId = Integer.parseInt(nameOrId2.substring(1));;
                         } catch (Exception e) {
                             if (!nameOrId2.equals("UNKNOWN")) {
-                                person.husbandName = nameOrId2;
+                                person.husbandName = nameOrId2.trim().replaceAll(" +", " ");
                             }
                         }
                         break;
                     case "mother":
-                        person.motherName = parseOnlyInner(reader, localStart);
+                        person.motherName = parseOnlyInner(reader, localStart).trim().replaceAll(" +", " ");
                         assert person.motherName.trim().split(" +").length == 2;
                         break;
                     case "father":
-                        person.fatherName = parseOnlyInner(reader, localStart);
+                        person.fatherName = parseOnlyInner(reader, localStart).trim().replaceAll(" +", " ");
                         assert person.fatherName.trim().split(" +").length == 2;
                         break;
                     case "brother":
-                        person.brotherNames.add(parseOnlyInner(reader, localStart));
+                        person.brotherNames.add(parseOnlyInner(reader, localStart).trim().replaceAll(" +", " "));
                         break;
                     case "sister":
-                        person.sisterNames.add(parseOnlyInner(reader, localStart));
+                        person.sisterNames.add(parseOnlyInner(reader, localStart).trim().replaceAll(" +", " "));
                         break;
                     case "son":
                         person.sonIds.add(Integer.parseInt(parseOnlyValueAttrib(reader, localStart, "id").substring(1)));
@@ -200,10 +198,10 @@ public class Main {
                         person.id = Integer.parseInt(parseOnlyValueAttrib(reader, localStart).substring(1));
                         break;
                     case "firstname":
-                        person.firstName = parseValueOrInner(reader, localStart).trim();
+                        person.firstName = parseValueOrInner(reader, localStart).trim().replaceAll(" +", " ");
                         break;
                     case "first":
-                        person.firstName = parseOnlyInner(reader, localStart).trim();
+                        person.firstName = parseOnlyInner(reader, localStart).trim().replaceAll(" +", " ");
                         break;
                     case "family":
                     case "family-name":
@@ -217,7 +215,7 @@ public class Main {
                         person.gender = str.equals("F") || str.equals("female") ? Gender.Female : Gender.Male;
                         break;
                     case "child":
-                        person.childrenNames.add(parseOnlyInner(reader, localStart));
+                        person.childrenNames.add(parseOnlyInner(reader, localStart).trim().replaceAll(" +", " "));
                         break;
                     case "parent":
                         var nameOrId3 = parseValueOrInner(reader, localStart);
@@ -226,14 +224,14 @@ public class Main {
                             person.parentIds.add(id);
                         } catch (Exception e) {
                             if (!nameOrId3.equals("UNKNOWN")) {
-                                person.parentNames.add(nameOrId3);
+                                person.parentNames.add(nameOrId3.trim().replaceAll(" +", " "));
                             }
                         }
                         break;
                     case "spouce":
                         var name = parseMaybeValueAttrib(reader, localStart, "value");
                         if (name != null && !name.equals("NONE"))
-                            person.spouceName = name;
+                            person.spouceName = name.trim().replaceAll(" +", " ");
                         break;
                     case "siblings":
                         var siblings = parseMaybeValueAttrib(reader, localStart, "val");
@@ -255,41 +253,10 @@ public class Main {
             }
             people.add(person);
         }
-        System.out.println(peopleCount);
-//        System.out.println(people);
-//        System.out.println(people.size());
-//        System.out.println(peopleCount);
-        var namesToTemps = new HashMap<String, ArrayList<PersonTemplate>>();
-        for (var person : people) {
-//            assert (person.firstName != null) == (person.familyName != null);
-//            if ((person.familyName == null) != (person.firstName == null)) {
-//                System.out.println(person);
-//                assert person.id != null;
-//            }
-//            System.out.println(person.firstName + "; " + person.familyName);
-            if (person.firstName != null && person.familyName != null) {
-                var key = person.firstName + " " + person.familyName;
-                if (!namesToTemps.containsKey(key))
-                    namesToTemps.put(key, new ArrayList<>());
-                namesToTemps.get(person.firstName + " " + person.familyName).add(person);
-            }
-        }
-//        for (var entries : namesToTemps.values()) {
-//            Integer id = null;
-//            for (var entry : entries) {
-//                if (entry.id != null) {
-//                    if (id != null && !id.equals(entry.id)) {
-//                        System.out.println(entries);
-//                    }
-////                    assert (id == null) || id.equals(entry.id);
-//                    id = entry.id;
-//                }
-//            }
-//        }
-        System.out.println(namesToTemps.size());
         var peopleOut = new HashMap<Integer, Person>();
         var idsToTemps = new HashMap<Integer, ArrayList<PersonTemplate>>();
         var genderHints = new HashMap<Integer, ArrayList<Gender>>();
+        var namesToTemps = new HashMap<String, ArrayList<PersonTemplate>>();
         for (var person : people) {
             if (person.id != null) {
                 if (!peopleOut.containsKey(person.id)) {
@@ -298,9 +265,56 @@ public class Main {
                     idsToTemps.put(person.id, new ArrayList<>());
                 }
                 idsToTemps.get(person.id).add(person);
+            } else {
+                var key = person.firstName + " " + person.familyName;
+                if (!namesToTemps.containsKey(key)) {
+                    namesToTemps.put(key, new ArrayList<>());
+                }
+                namesToTemps.get(key).add(person);
             }
         }
-        System.out.println(peopleOut.size());
+        BiConsumer<Integer, Integer> setHusbandWife = (hId, wId) -> {
+            if (!assertEquals(peopleOut.get(hId).spouce, wId))
+                return;
+            if (!assertEquals(peopleOut.get(wId).spouce, hId))
+                return;
+            peopleOut.get(hId).spouce = wId;
+            peopleOut.get(wId).spouce = hId;
+        };
+        BiConsumer<Integer, Integer> addChild = (pId, cId) -> {
+            var child = peopleOut.get(cId);
+            if (child.parents[0] != null && child.parents[1] != null)
+                if (!child.parents[0].equals(pId) && !child.parents[1].equals(pId))
+                    return;
+            if (!peopleOut.get(pId).children.contains(cId))
+                peopleOut.get(pId).children.add(cId);
+            if (child.parents[0] == null) {
+                child.parents[0] = pId;
+            } else if (!child.parents[0].equals(pId) && child.parents[1] == null) {
+                child.parents[1] = pId;
+            } else {
+                assert child.parents[0].equals(pId) || child.parents[1].equals(pId);
+            }
+        };
+        BiConsumer<Integer, Integer> addSibling = (lhsId, rhsId) -> {
+            var lhs = peopleOut.get(lhsId);
+            var rhs = peopleOut.get(rhsId);
+            if (!lhs.siblings.contains(rhsId))
+                lhs.siblings.add(rhsId);
+            if (!rhs.siblings.contains(lhsId))
+                rhs.siblings.add(lhsId);
+            // Should all siblings have same parents?
+            for (var parent : lhs.parents) {
+                if (parent != null) {
+                    addChild.accept(parent, rhsId);
+                }
+            }
+            for (var parent : rhs.parents) {
+                if (parent != null) {
+                    addChild.accept(parent, lhsId);
+                }
+            }
+        };
         for (var id : peopleOut.keySet()) {
             var temps = idsToTemps.get(id);
             Person person = peopleOut.get(id);
@@ -314,32 +328,14 @@ public class Main {
                     assertEquals(person.familyName, temp.familyName);
                     person.familyName = temp.familyName;
                 }
-                BiConsumer<Integer, Integer> setHusbandWife = (hId, wId) -> {
-                    assertEquals(peopleOut.get(hId).spouce, wId);
-                    assertEquals(peopleOut.get(wId).spouce, hId);
-                    peopleOut.get(hId).spouce = wId;
-                    peopleOut.get(wId).spouce = hId;
-                    genderHints.get(wId).add(Gender.Female);
-                    genderHints.get(hId).add(Gender.Male);
-                };
                 if (temp.wifeId != null) {
                     setHusbandWife.accept(id, temp.wifeId);
+                    genderHints.get(temp.wifeId).add(Gender.Female);
                 }
                 if (temp.husbandId != null) {
                     setHusbandWife.accept(temp.husbandId, id);
+                    genderHints.get(temp.husbandId).add(Gender.Male);
                 }
-                BiConsumer<Integer, Integer> addChild = (pId, cId) -> {
-                    if (!peopleOut.get(pId).children.contains(cId))
-                        peopleOut.get(pId).children.add(cId);
-                    var child = peopleOut.get(cId);
-                    if (child.parents[0] == null) {
-                        child.parents[0] = pId;
-                    } else if (!child.parents[0].equals(pId) && child.parents[1] == null) {
-                        child.parents[1] = pId;
-                    } else {
-                        assert child.parents[0].equals(pId) || child.parents[1].equals(pId);
-                    }
-                };
                 for (var sonId : temp.sonIds) {
                     addChild.accept(id, sonId);
                     genderHints.get(sonId).add(Gender.Male);
@@ -352,71 +348,244 @@ public class Main {
                     addChild.accept(parent, id);
                 }
                 for (var sibling : temp.siblingIds) {
-                    var lhs = peopleOut.get(sibling);
-                    var rhs = peopleOut.get(id);
-                    if (!lhs.siblings.contains(id))
-                        lhs.siblings.add(id);
-                    if (!rhs.siblings.contains(sibling))
-                        rhs.siblings.add(sibling);
-                    // Should all siblings have same parents?
-                    for (var parent : lhs.parents) {
-                        if (parent != null) {
-                            addChild.accept(parent, id);
-                        }
-                    }
-                    for (var parent : rhs.parents) {
-                        if (parent != null) {
-                            addChild.accept(parent, sibling);
-                        }
-                    }
+                    addSibling.accept(id, sibling);
                 }
             }
-//            var maleCnt = temps.stream().filter((p) -> p.gender.equals(Gender.Male)).count();
-//            var totalCnt = temps.stream().filter((p) -> p.gender.equals(Gender.Male)).count();
-//            if (maleCnt != )
-//            person.gender = maleCnt >= temps.size() / 2.0 ? Gender.Male : Gender.Female;
         }
-//        for (var person : people) {
-//            if (person.id != null && person.firstName != null) {
-//                peopleOut.get(person.id).firstName = person.firstName;
-//            }
-//            if (person.id != null && person.familyName != null) {
-//                peopleOut.get(person.id).familyName = person.familyName;
-//            }
-//            if (person.id != null && person.gender != null) {
-//                genderHints.get(person.id).add(person.gender);
-//            }
-//            if (person.id != null && person.wifeId != null) {
-//                peopleOut.get(person.id).wife = person.wifeId;
-//                peopleOut.get(person.wifeId).husband = person.id;
-//                genderHints.get(person.wifeId).add(Gender.Female);
-//                genderHints.get(person.id).add(Gender.Male);
-//            }
-//            if (person.id != null && person.husbandId != null) {
-//                peopleOut.get(person.id).husband = person.husbandId;
-//                genderHints.get(person.husbandId).add(Gender.Male);
-//            }
-//            if (person.id != null && !person.sonIds.isEmpty()) {
-//                peopleOut.get(person.id).sons = person.sonIds;
-//                for (var id : person.sonIds) {
-//                    genderHints.get(id).add(Gender.Male);
-//                }
-//            }
-//            if (person.id != null && !person.daughterIds.isEmpty()) {
-//                peopleOut.get(person.id).daughters = person.daughterIds;
-//                for (var id : person.daughterIds) {
-//                    genderHints.get(id).add(Gender.Female);
-//                }
-//            }
-//        }
+        var namesToIds = new HashMap<String, ArrayList<Integer>>();
+        for (var id : peopleOut.keySet()) {
+            var person = peopleOut.get(id);
+            assert (person.firstName != null) && (person.familyName != null);
+            var key = person.firstName + " " + person.familyName;
+            if (!namesToIds.containsKey(key)) {
+                namesToIds.put(key, new ArrayList<>());
+            }
+            namesToIds.get(key).add(id);
+        }
+        for (var id : peopleOut.keySet()) {
+            var temps = idsToTemps.get(id);
+            var person = peopleOut.get(id);
+            var additionals = namesToTemps.get(person.firstName + " " + person.familyName);
+            if (additionals != null)
+                temps.addAll(additionals.stream().filter((t) ->  {
+                    if (!(t.id == null || t.id.equals(id)))
+                        return false;
+                    if (person.spouce != null && !person.spouce.equals(t.husbandId))
+                        return false;
+                    if (person.spouce != null && !person.spouce.equals(t.wifeId))
+                        return false;
+                    return true;
+                }).toList());
+            for (var temp : temps) {
+                if (temp.wifeName != null) {
+                    var ids = namesToIds.get(temp.wifeName);
+                    assert ids != null && !ids.isEmpty();
+                    var wifeId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.spouce != null)
+                            return lhs.spouce.equals(id) ? 1 : -1;
+                        if (rhs.spouce != null)
+                            return rhs.spouce.equals(id) ? -1 : 1;
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    setHusbandWife.accept(id, wifeId);
+                    genderHints.get(wifeId).add(Gender.Female);
+                }
+                if (temp.husbandName != null) {
+                    var ids = namesToIds.get(temp.husbandName);
+                    assert ids != null && !ids.isEmpty();
+                    var husbandId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.spouce != null)
+                            return lhs.spouce.equals(id) ? 1 : -1;
+                        if (rhs.spouce != null)
+                            return rhs.spouce.equals(id) ? -1 : 1;
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    setHusbandWife.accept(husbandId, id);
+                    genderHints.get(husbandId).add(Gender.Male);
+                }
+                if (temp.spouceName != null) {
+                    var ids = namesToIds.get(temp.spouceName);
+                    assert ids != null && !ids.isEmpty();
+                    var spouceId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.spouce != null)
+                            return lhs.spouce.equals(id) ? 1 : -1;
+                        if (rhs.spouce != null)
+                            return rhs.spouce.equals(id) ? -1 : 1;
+                        for (var childId : peopleOut.get(id).children) {
+                            if (lhs.children.contains(childId)) {
+                                return 1;
+                            }
+                            if (rhs.children.contains(childId)) {
+                                return -1;
+                            }
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    setHusbandWife.accept(spouceId, id);
+                }
+                if (temp.fatherName != null) {
+                    var ids = namesToIds.get(temp.fatherName);
+                    assert ids != null && !ids.isEmpty();
+                    var fatherId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.children.contains(id)) {
+                            return 1;
+                        }
+                        if (rhs.children.contains(id)) {
+                            return -1;
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    addChild.accept(fatherId, id);
+                    genderHints.get(fatherId).add(Gender.Male);
+                }
+                if (temp.motherName != null) {
+                    var ids = namesToIds.get(temp.motherName);
+                    assert ids != null && !ids.isEmpty();
+                    var motherId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.children.contains(id)) {
+                            return 1;
+                        }
+                        if (rhs.children.contains(id)) {
+                            return -1;
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    addChild.accept(motherId, id);
+                    genderHints.get(motherId).add(Gender.Female);
+                }
+                for (var brotherName : temp.brotherNames) {
+                    var ids = namesToIds.get(brotherName);
+                    assert ids != null && !ids.isEmpty();
+                    var self = peopleOut.get(id);
+                    var brotherId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.siblings.contains(id)) {
+                            return 1;
+                        }
+                        if (rhs.siblings.contains(id)) {
+                            return -1;
+                        }
+                        for (int i = 0; i < 2; i++) {
+                            if (self.parents[i] != null) {
+                                if ((self.parents[i].equals(lhs.parents[0]) || self.parents[i].equals(lhs.parents[1])))
+                                    return 1;
+                            }
+                        }
+                        for (int i = 0; i < 2; i++) {
+                            if (self.parents[i] != null) {
+                                if ((self.parents[i].equals(rhs.parents[0]) || self.parents[i].equals(rhs.parents[1])))
+                                    return -1;
+                            }
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    addSibling.accept(id, brotherId);
+                    genderHints.get(brotherId).add(Gender.Male);
+                }
+                for (var sisterName : temp.sisterNames) {
+                    var ids = namesToIds.get(sisterName);
+                    assert ids != null && !ids.isEmpty();
+                    var self = peopleOut.get(id);
+                    var sisterId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        for (int i = 0; i < 2; i++) {
+                            if (self.parents[i] != null) {
+                                if ((self.parents[i].equals(lhs.parents[0]) || self.parents[i].equals(lhs.parents[1])))
+                                    return 1;
+                            }
+                        }
+                        for (int i = 0; i < 2; i++) {
+                            if (self.parents[i] != null) {
+                                if ((self.parents[i].equals(rhs.parents[0]) || self.parents[i].equals(rhs.parents[1])))
+                                    return -1;
+                            }
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    addSibling.accept(id, sisterId);
+                    genderHints.get(sisterId).add(Gender.Female);
+                }
+                for (var childName : temp.childrenNames) {
+                    var ids = namesToIds.get(childName);
+                    assert ids != null && !ids.isEmpty();
+                    var childId = ids.stream().filter((filterId) -> {
+                        var filterPerson = peopleOut.get(filterId);
+                        if (filterPerson.parents[0] != null && filterPerson.parents[1] != null && !filterPerson.parents[0].equals(id) && !filterPerson.parents[1].equals(id))
+                            return false;
+                        return true;
+                    }).toList();
+                    if (childId.size() == 1) {
+                        addChild.accept(id, childId.get(0));
+                    }
+                }
+                for (var parentName : temp.parentNames) {
+                    var ids = namesToIds.get(parentName);
+                    assert ids != null && !ids.isEmpty();
+                    var parentId = ids.stream().max((lhsId, rhsId) -> {
+                        var lhs = peopleOut.get(lhsId);
+                        var rhs = peopleOut.get(rhsId);
+                        if (lhs.children.contains(id)) {
+                            return 1;
+                        }
+                        if (rhs.children.contains(id)) {
+                            return -1;
+                        }
+                        assert false;
+                        return lhsId;
+                    }).get();
+                    addChild.accept(parentId, id);
+                }
+                if (temp.wifeId != null) {
+                    setHusbandWife.accept(id, temp.wifeId);
+                    genderHints.get(temp.wifeId).add(Gender.Female);
+                }
+                if (temp.husbandId != null) {
+                    setHusbandWife.accept(temp.husbandId, id);
+                    genderHints.get(temp.husbandId).add(Gender.Male);
+                }
+                for (var sonId : temp.sonIds) {
+                    addChild.accept(id, sonId);
+                    genderHints.get(sonId).add(Gender.Male);
+                }
+                for (var daughterId : temp.daughterIds) {
+                    addChild.accept(id, daughterId);
+                    genderHints.get(daughterId).add(Gender.Female);
+                }
+                for (var parent : temp.parentIds) {
+                    addChild.accept(parent, id);
+                }
+                for (var sibling : temp.siblingIds) {
+                    addSibling.accept(id, sibling);
+                }
+            }
+        }
 
         for (var id : genderHints.keySet()) {
             var maleCnt = genderHints.get(id).stream().filter((g) -> g.equals(Gender.Male)).count();
             peopleOut.get(id).gender = maleCnt >= genderHints.get(id).size() / 2.0 ? Gender.Male : Gender.Female;
         }
-        System.out.println(people.size());
-        System.out.println(people.stream().filter((p) -> p.id != null).count());
-        System.out.println(peopleOut.get(397288));
+
+        System.out.println(peopleOut.get(395953));
+        System.out.println(peopleOut.get(395954));
     }
     static String parseOnlyValueAttrib(XMLEventReader reader, StartElement start) throws XMLStreamException {
         return parseOnlyValueAttrib(reader, start, "value");
@@ -470,7 +639,7 @@ public class Main {
         assert next.isEndElement();
         return res;
     }
-    static void assertEquals(Object lhs, Object rhs) {
-        assert lhs == null || lhs.equals(rhs);
+    static boolean assertEquals(Object lhs, Object rhs) {
+        return lhs == null || lhs.equals(rhs);
     }
 }
