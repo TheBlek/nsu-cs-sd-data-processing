@@ -1,11 +1,19 @@
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.annotation.*;
+import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
+import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
+import javax.xml.validation.SchemaFactory;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.*;
@@ -14,10 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Main {
-    private enum Gender {
-        Female,
-        Male,
-    }
+
     private static class PersonTemplate {
         String firstName = null; // done
         String familyName = null; // done
@@ -44,36 +49,42 @@ public class Main {
         @Override
         public String toString() {
             return "PersonTemplate{" +
-                    "firstName='" + firstName + '\'' +
-                    ", familyName='" + familyName + '\'' +
-                    ", motherName='" + motherName + '\'' +
-                    ", fatherName='" + fatherName + '\'' +
-                    ", wifeName='" + wifeName + '\'' +
-                    ", wifeId=" + wifeId +
-                    ", husbandName='" + husbandName + '\'' +
-                    ", husbandId=" + husbandId +
-                    ", spouceName='" + spouceName + '\'' +
-                    ", brotherNames=" + brotherNames +
-                    ", sisterNames=" + sisterNames +
-                    ", siblingIds=" + siblingIds +
-                    ", sonIds=" + sonIds +
-                    ", daughterIds=" + daughterIds +
-                    ", childrenNames=" + childrenNames +
-                    ", parentNames=" + parentNames +
-                    ", parentIds=" + parentIds +
-                    ", siblingsNum=" + siblingsNum +
-                    ", childrenNum=" + childrenNum +
-                    ", id=" + id +
-                    ", gender=" + gender +
-                    '}';
+                "firstName='" + firstName + '\'' +
+                ", familyName='" + familyName + '\'' +
+                ", motherName='" + motherName + '\'' +
+                ", fatherName='" + fatherName + '\'' +
+                ", wifeName='" + wifeName + '\'' +
+                ", wifeId=" + wifeId +
+                ", husbandName='" + husbandName + '\'' +
+                ", husbandId=" + husbandId +
+                ", spouceName='" + spouceName + '\'' +
+                ", brotherNames=" + brotherNames +
+                ", sisterNames=" + sisterNames +
+                ", siblingIds=" + siblingIds +
+                ", sonIds=" + sonIds +
+                ", daughterIds=" + daughterIds +
+                ", childrenNames=" + childrenNames +
+                ", parentNames=" + parentNames +
+                ", parentIds=" + parentIds +
+                ", siblingsNum=" + siblingsNum +
+                ", childrenNum=" + childrenNum +
+                ", id=" + id +
+                ", gender=" + gender +
+                '}';
         }
     }
 
+
     private static class Person {
+        String id = null;
+        @XmlElement
         String firstName = null;
+        @XmlElement
         String familyName = null;
+        @XmlElement
         Gender gender = null;
         Integer[] parents = {null, null};
+
         Integer spouce = null;
         List<Integer> siblings = new ArrayList<>();
         List<Integer> children = new ArrayList<>();
@@ -81,18 +92,18 @@ public class Main {
         @Override
         public String toString() {
             return "Person{" +
-                    "firstName='" + firstName + '\'' +
-                    ", familyName='" + familyName + '\'' +
-                    ", gender=" + gender +
-                    ", parents=" + Arrays.toString(parents) +
-                    ", spouce=" + spouce +
-                    ", siblings=" + siblings +
-                    ", children=" + children +
-                    '}';
+                "firstName='" + firstName + '\'' +
+                ", familyName='" + familyName + '\'' +
+                ", gender=" + gender +
+                ", parents=" + Arrays.toString(parents) +
+                ", spouce=" + spouce +
+                ", siblings=" + siblings +
+                ", children=" + children +
+                '}';
         }
     }
 
-    public static void main(String[] args) throws FileNotFoundException, XMLStreamException {
+    public static void main(String[] args) throws FileNotFoundException, XMLStreamException, JAXBException, SAXException {
         var path = "people.xml";
         XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
         XMLEventReader reader = xmlInputFactory.createXMLEventReader(new FileInputStream(path));
@@ -584,8 +595,91 @@ public class Main {
             peopleOut.get(id).gender = maleCnt >= genderHints.get(id).size() / 2.0 ? Gender.Male : Gender.Female;
         }
 
-        System.out.println(peopleOut.get(395953));
-        System.out.println(peopleOut.get(395954));
+        var xmlPeopleMap = new HashMap<Integer, FinalPerson>();
+        for (var id : peopleOut.keySet()) {
+            xmlPeopleMap.put(id, new FinalPerson());
+        }
+        for (var id : peopleOut.keySet()) {
+            var dataPerson = peopleOut.get(id);
+            FinalPerson person = xmlPeopleMap.get(id);
+            person.id = id.toString();
+            person.firstName = dataPerson.firstName;
+            person.familyName = dataPerson.familyName;
+
+            for (int i = 0; i < 2; i++) {
+                if (dataPerson.parents[i] == null) continue;
+                var parent = peopleOut.get(dataPerson.parents[i]);
+                var parentXml = xmlPeopleMap.get(dataPerson.parents[i]);
+                switch (parent.gender) {
+                    case Gender.Female:
+                        person.mother = parentXml;
+                        break;
+                    case Gender.Male:
+                        person.father = parentXml;
+                        break;
+                }
+            }
+
+            for (int i = 0; i < dataPerson.siblings.size(); i++) {
+                var sibling = peopleOut.get(dataPerson.siblings.get(i));
+                var siblingXml = xmlPeopleMap.get(dataPerson.siblings.get(i));
+                switch (sibling.gender) {
+                    case Gender.Female:
+                        person.sisters.add(siblingXml);
+                        break;
+                    case Gender.Male:
+                        person.brothers.add(siblingXml);
+                        break;
+                }
+            }
+
+            for (int i = 0; i < dataPerson.children.size(); i++) {
+                var child = peopleOut.get(dataPerson.children.get(i));
+                var childXml = xmlPeopleMap.get(dataPerson.children.get(i));
+                switch (child.gender) {
+                    case Gender.Female:
+                        person.daughters.add(childXml);
+                        break;
+                    case Gender.Male:
+                        person.sons.add(childXml);
+                        break;
+                }
+            }
+            if (dataPerson.spouce == null)
+                continue;
+            var spouce = peopleOut.get(dataPerson.spouce);
+            var spouceXml = xmlPeopleMap.get(dataPerson.spouce);
+            switch (spouce.gender) {
+                case Gender.Female:
+                    person.wife = spouceXml;
+                    break;
+                case Gender.Male:
+                    person.husband = spouceXml;
+                    break;
+            }
+        }
+        var xmlPeople = new People();
+//        int i = 0;
+//        for (var person : xmlPeopleMap.values()) {
+//            xmlPeople.people.add(person);
+//            i++;
+//            if (i > 1000) {
+//                break;
+//            }
+//        }
+         xmlPeople.people.addAll(xmlPeopleMap.values());
+
+        JAXBContext context = JAXBContext.newInstance(People.class);
+        Marshaller mar = context.createMarshaller();
+        mar.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+        mar.marshal(xmlPeople, new File("./peopleOut.xml"));
+
+        var schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        var schema = schemaFactory.newSchema(new File("./peopleOut.xsd"));
+        var unmar = context.createUnmarshaller();
+        unmar.setSchema(schema);
+        unmar.unmarshal(new File("./peopleOut.xml"));
+        System.out.println("Success!");
     }
     static String parseOnlyValueAttrib(XMLEventReader reader, StartElement start) throws XMLStreamException {
         return parseOnlyValueAttrib(reader, start, "value");

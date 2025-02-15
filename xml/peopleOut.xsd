@@ -1,0 +1,49 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="people">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="person" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="firstName"/>
+              <xs:element type="xs:string" name="familyName"/>
+              <xs:element type="xs:int" name="mother" minOccurs="0"/>
+              <xs:element type="xs:int" name="father" minOccurs="0"/>
+              <xs:element type="xs:int" name="wife" minOccurs="0"/>
+              <xs:element type="xs:int" name="husband" minOccurs="0"/>
+              <xs:element name="brothers">
+                <xs:complexType mixed="true">
+                  <xs:sequence>
+                    <xs:element type="xs:int" name="brother" maxOccurs="unbounded" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="sisters">
+                <xs:complexType mixed="true">
+                  <xs:sequence>
+                    <xs:element type="xs:int" name="sister" maxOccurs="unbounded" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="sons">
+                <xs:complexType mixed="true">
+                  <xs:sequence>
+                    <xs:element type="xs:int" name="son" maxOccurs="unbounded" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="daughters">
+                <xs:complexType mixed="true">
+                  <xs:sequence>
+                    <xs:element type="xs:int" name="daughter" maxOccurs="unbounded" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute type="xs:int" name="id" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
