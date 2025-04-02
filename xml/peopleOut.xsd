@@ -45,5 +45,51 @@
         </xs:element>
       </xs:sequence>
     </xs:complexType>
+
+    <xs:key name="PersonId">
+      <xs:selector xpath=".//person"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <xs:keyref name="HusbandRef" refer="PersonId">
+      <xs:selector xpath=".//person"/>
+      <xs:field xpath="husband"/>
+    </xs:keyref>
+
+    <xs:keyref name="WifeRef" refer="PersonId">
+      <xs:selector xpath=".//person"/>
+      <xs:field xpath="wife"/>
+    </xs:keyref>
+
+    <xs:keyref name="MotherRef" refer="PersonId">
+      <xs:selector xpath=".//person"/>
+      <xs:field xpath="mother"/>
+    </xs:keyref>
+
+    <xs:keyref name="FatherRef" refer="PersonId">
+      <xs:selector xpath=".//person"/>
+      <xs:field xpath="father"/>
+    </xs:keyref>
+
+    <xs:keyref name="BrotherRef" refer="PersonId">
+      <xs:selector xpath=".//person/brothers/brother"/>
+      <xs:field xpath="."/>
+    </xs:keyref>
+
+    <xs:keyref name="SisterRef" refer="PersonId">
+      <xs:selector xpath=".//person/sisters/sister"/>
+      <xs:field xpath="."/>
+    </xs:keyref>
+
+    <xs:keyref name="SonRef" refer="PersonId">
+      <xs:selector xpath=".//person/sons/son"/>
+      <xs:field xpath="."/>
+    </xs:keyref>
+
+    <xs:keyref name="DaughterRef" refer="PersonId">
+      <xs:selector xpath=".//person/daughter2s/daughter"/>
+      <xs:field xpath="."/>
+    </xs:keyref>
+
   </xs:element>
 </xs:schema>

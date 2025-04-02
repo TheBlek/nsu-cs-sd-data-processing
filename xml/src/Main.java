@@ -674,6 +674,7 @@ public class Main {
         mar.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         mar.marshal(xmlPeople, new File("./peopleOut.xml"));
 
+        System.out.println("Reading people");
         var schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         var schema = schemaFactory.newSchema(new File("./peopleOut.xsd"));
         var unmar = context.createUnmarshaller();
